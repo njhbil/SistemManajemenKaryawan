@@ -42,10 +42,6 @@ python SistemManajemenKaryawan.py
 - ID: 1003
 - Password: hr123
 
-## Screenshots
-
-*Add screenshots of your application here*
-
 ## License
 
 MIT License
