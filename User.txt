@@ -1,0 +1,10 @@
+yuda:1003:admin123:Admin:5000000
+josua:1001:manager123:Manager:10000000
+ronald:1002:hr123:Human Resource:6000000
+budi:1004:cleaning123:Cleaning Service:3500000
+sari:1005:intern123:Internship:2500000
+andi:1006:marketing123:Marketing:4500000
+maya:1007:intern456:Internship:2500000
+rizki:1008:cleaning456:Cleaning Service:3500000
+devi:1009:marketing456:Marketing:4500000
+fadil:1010:admin456:Admin:5000000
