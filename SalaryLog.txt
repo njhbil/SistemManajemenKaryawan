@@ -1,0 +1,2 @@
+Salary Update - Staff ID: 1018, New Salary: $4,000,000, Reason: salah tulis, Updated by: manager, Time: 2025-05-30 08:24:27
+Salary Update - Staff ID: 1018, New Salary: $2,500,000, Reason: salah, Updated by: manager, Time: 2025-05-30 08:25:03
