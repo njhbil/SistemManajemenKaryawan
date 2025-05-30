@@ -345,7 +345,7 @@ class LoginPage(tk.Frame):
         header_frame.pack(fill="x", pady=0)
         
         tk.Label(header_frame, 
-                text="🏨 LUXURY HOTEL MANAGEMENT SYSTEM", 
+                text="🏨 LUXURY HOTEL EMPLOYEE MANAGEMENT SYSTEM", 
                 font=self.theme.font_brand,
                 bg=self.theme.primary_gold,
                 fg=self.theme.system_background,
