@@ -643,7 +643,7 @@ class MainMenuPage(tk.Frame):
         header_frame.pack(fill="x", pady=0)
         
         self.title_label = tk.Label(header_frame, 
-                                  text="🏨 HOTEL MANAGEMENT DASHBOARD", 
+                                  text="🏨 EMPLOYEE MANAGEMENT DASHBOARD", 
                                   font=self.theme.font_title,
                                   bg=self.theme.primary_gold, 
                                   fg=self.theme.system_background,
