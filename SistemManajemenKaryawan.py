@@ -53,20 +53,24 @@ class Staff(ABC):
     
     def login(self, nama, idStaff, password):
         # Login validation
-        return self._nama == nama and self._idStaff == idStaff and self.__password == password
+            return self._nama == nama and self._idStaff == idStaff and self.__password == password
     
     def request_leave(self):
         return "Leave request submitted"
     
     def submit_report(self, isi_laporan, judul="Daily Report"):
         waktu = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        # Format: id:nama:status:judul:waktu:isi_laporan:status_laporan:catatan
-        data_laporan = f"{self._idStaff}:{self._nama}:{self.__status}:{judul}:{waktu}:{isi_laporan}:Pending:-\n"
+        
+        # Generate unique report ID
+        report_id = f"RPT{int(datetime.now().timestamp())}"
+        
+        # Format: report_id:staff_id:staff_name:title:timestamp:content:status:notes
+        data_laporan = f"{report_id}:{self._idStaff}:{self._nama}:{judul}:{waktu}:{isi_laporan}:Pending:-\n"
         
         with open(FILE_LAPORAN, "a") as file:
             file.write(data_laporan)
         
-        return f"Report successfully submitted to Management at {waktu}"        
+        return f"Report successfully submitted to Management at {waktu}"
     
     @abstractmethod
     def display_salary(self):
@@ -126,20 +130,29 @@ class Manager(Staff):
     
     def display_salary(self):
         return f"Manager {self._nama} Salary: ${self.getGaji():,}"
-        
+    
     def review_laporan(self, id_laporan, status, catatan):
+        if not os.path.exists(FILE_LAPORAN):
+            return "No reports file found"
+            
         updated_lines = []
+        report_found = False
+        
         with open(FILE_LAPORAN, "r") as file:
             lines = file.readlines()
             for line in lines:
                 parts = line.strip().split(":")
-                if len(parts) >= 8 and parts[0] == id_laporan:
+                if len(parts) >= 8 and parts[0] == str(id_laporan):
                     parts[6] = status  # Update status
                     parts[7] = catatan  # Update notes
                     updated_line = ":".join(parts)
                     updated_lines.append(updated_line + "\n")
+                    report_found = True
                 else:
                     updated_lines.append(line)
+        
+        if not report_found:
+            return f"Report ID {id_laporan} not found"
         
         with open(FILE_LAPORAN, "w") as file:
             file.writelines(updated_lines)
@@ -171,18 +184,27 @@ class Admin(Staff):
         return hasil
     
     def review_laporan(self, id_laporan, status, catatan):
+        if not os.path.exists(FILE_LAPORAN):
+            return "No reports file found"
+            
         updated_lines = []
+        report_found = False
+        
         with open(FILE_LAPORAN, "r") as file:
             lines = file.readlines()
             for line in lines:
                 parts = line.strip().split(":")
-                if len(parts) >= 8 and parts[0] == id_laporan:
+                if len(parts) >= 8 and parts[0] == str(id_laporan):
                     parts[6] = status  # Update status
                     parts[7] = catatan  # Update notes
                     updated_line = ":".join(parts)
                     updated_lines.append(updated_line + "\n")
+                    report_found = True
                 else:
                     updated_lines.append(line)
+        
+        if not report_found:
+            return f"Report ID {id_laporan} not found"
         
         with open(FILE_LAPORAN, "w") as file:
             file.writelines(updated_lines)
@@ -281,17 +303,25 @@ class HotelTheme:
         self.system_background = "#1A1A1A"   # Rich black
         self.surface_dark = "#2D2D2D"        # Dark surface
         self.surface_light = "#3A3A3A"       # Light surface
+        self.surface_elevated = "#404040"    # Elevated surface
         self.text_primary = "#FFFFFF"        # White text
         self.text_secondary = "#CCCCCC"      # Light gray text
         self.success_emerald = "#50C878"     # Emerald green
         self.warning_amber = "#FFBF00"       # Amber warning
         self.danger_ruby = "#E0115F"         # Ruby red
-          # Font configuration
+        self.border_light = "#555555"        # Light border
+        self.border_accent = "#FFB000"       # Accent border
+        self.luxury_black = "#000000"        # Pure black
+        self.text_tertiary = "#999999"       # Tertiary text
+        
+        # Font configuration
         self.font_brand = ("Segoe UI", 24, "bold")
         self.font_title = ("Segoe UI", 18, "bold")
         self.font_heading = ("Segoe UI", 12, "bold")
+        self.font_subheading = ("Segoe UI", 11, "bold")
         self.font_body = ("Segoe UI", 10)
         self.font_small = ("Segoe UI", 8)
+        self.font_tiny = ("Segoe UI", 7)
 
 # Class untuk aplikasi utama
 class SistemManajemenKaryawan(tk.Tk):
@@ -340,183 +370,415 @@ class LoginPage(tk.Frame):
         self.controller = controller
         self.theme = controller.theme
         self.configure(bg=self.theme.system_background)
-          # UI Components
-        header_frame = tk.Frame(self, bg=self.theme.primary_gold)
-        header_frame.pack(fill="x", pady=0)
         
-        tk.Label(header_frame, 
-                text="🏨 LUXURY HOTEL EMPLOYEE MANAGEMENT SYSTEM", 
+        # Create animated background effect
+        self.create_animated_background()
+        
+        # Enhanced header with gradient effect
+        header_frame = tk.Frame(self, bg=self.theme.primary_gold, height=80)
+        header_frame.pack(fill="x", pady=0)
+        header_frame.pack_propagate(False)
+        
+        # Main title with enhanced styling
+        title_container = tk.Frame(header_frame, bg=self.theme.primary_gold)
+        title_container.pack(expand=True, fill="both")
+        
+        main_title = tk.Label(title_container, 
+                text="🏨 LUXURY HOTEL EMPLOYEE MANAGEMENT", 
                 font=self.theme.font_brand,
                 bg=self.theme.primary_gold,
-                fg=self.theme.system_background,
-                padx=20, pady=20).pack()
+                fg=self.theme.luxury_black,
+                pady=25)
+        main_title.pack()
         
-        # Main container
-        container = tk.Frame(self, bg=self.theme.system_background)
-        container.pack(fill="both", expand=True, padx=20, pady=20)
-          # Left side - Welcome info with improved layout
-        welcome_container = tk.Frame(container, bg=self.theme.surface_dark,
-                                    highlightbackground=self.theme.primary_gold,
-                                    highlightthickness=2, padx=15, pady=15)
-        welcome_container.pack(side=tk.LEFT, fill="both", expand=True, padx=(0, 10))
+        # Subtitle with elegant styling
+        subtitle = tk.Label(title_container,
+                text="✨ Premium Staff Portal Experience ✨",
+                font=self.theme.font_subheading,
+                bg=self.theme.primary_gold,
+                fg=self.theme.surface_dark)
+        subtitle.pack()
         
-        # Main welcome header (spans full width)
-        header_frame = tk.Frame(welcome_container, bg=self.theme.surface_dark)
-        header_frame.pack(fill="x", pady=(0, 20))
+        # Main container with enhanced layout
+        main_container = tk.Frame(self, bg=self.theme.system_background)
+        main_container.pack(fill="both", expand=True, padx=25, pady=25)
         
-        tk.Label(header_frame, text="🌟 WELCOME TO LUXURY HOTEL", 
+        # Welcome panel with modern card design
+        welcome_card = tk.Frame(main_container, 
+                               bg=self.theme.surface_dark,
+                               highlightbackground=self.theme.border_accent,
+                               highlightthickness=1,
+                               relief=tk.FLAT)
+        welcome_card.pack(side=tk.LEFT, fill="both", expand=True, padx=(0, 15))
+        
+        # Enhanced welcome header
+        welcome_header = tk.Frame(welcome_card, bg=self.theme.surface_dark)
+        welcome_header.pack(fill="x", padx=25, pady=(25, 15))
+        
+        # Welcome title with icon
+        welcome_title = tk.Label(welcome_header, 
+                text="🌟 WELCOME TO PREMIUM EXPERIENCE", 
                 font=self.theme.font_title,
                 bg=self.theme.surface_dark,
-                fg=self.theme.primary_gold).pack()
+                fg=self.theme.primary_gold)
+        welcome_title.pack()
         
-        # Live clock centered under header
-        self.create_live_clock(header_frame)
+        # Live clock with enhanced styling
+        self.create_enhanced_clock(welcome_header)
         
-        # Content area with three columns
-        content_frame = tk.Frame(welcome_container, bg=self.theme.surface_dark)
-        content_frame.pack(fill="both", expand=True)
+        # Feature showcase grid
+        features_container = tk.Frame(welcome_card, bg=self.theme.surface_dark)
+        features_container.pack(fill="both", expand=True, padx=25, pady=15)
         
-        # Configure column weights for proper distribution
-        content_frame.grid_columnconfigure(0, weight=1)
-        content_frame.grid_columnconfigure(1, weight=1)
-        content_frame.grid_columnconfigure(2, weight=1)
+        # Configure grid for equal distribution
+        for i in range(3):
+            features_container.grid_columnconfigure(i, weight=1)
+            features_container.grid_rowconfigure(0, weight=1)
+            features_container.grid_rowconfigure(1, weight=1)
         
-        # Left column - System Overview
-        left_column = tk.Frame(content_frame, bg=self.theme.surface_dark, padx=10)
-        left_column.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
+        # Feature cards with modern design
+        self.create_feature_card(features_container, "📊", "SYSTEM ANALYTICS", 
+                               "Real-time insights", 0, 0)
+        self.create_feature_card(features_container, "🔐", "SECURE ACCESS", 
+                               "Advanced security", 0, 1)
+        self.create_feature_card(features_container, "⏰", "TIME TRACKING", 
+                               "Smart attendance", 0, 2)
+        self.create_feature_card(features_container, "💰", "PAYROLL SYSTEM", 
+                               "Automated processing", 1, 0)
+        self.create_feature_card(features_container, "🏖️", "LEAVE MANAGEMENT", 
+                               "Streamlined requests", 1, 1)
+        self.create_feature_card(features_container, "📈", "PERFORMANCE", 
+                               "Growth tracking", 1, 2)
         
-        tk.Label(left_column, text="📊 SYSTEM OVERVIEW", 
-                font=self.theme.font_heading,
-                bg=self.theme.surface_dark,
-                fg=self.theme.accent_copper).pack(pady=(0, 10))
+        # Login panel with premium design
+        login_card = tk.Frame(main_container,
+                             bg=self.theme.surface_dark,
+                             highlightbackground=self.theme.border_accent,
+                             highlightthickness=2,
+                             relief=tk.FLAT,
+                             width=400)
+        login_card.pack(side=tk.RIGHT, fill="y", padx=(15, 0))
+        login_card.pack_propagate(False)
         
-        stats_info = self.get_system_stats()
-        for stat in stats_info:
-            tk.Label(left_column, text=stat, 
-                    font=self.theme.font_body,
-                    bg=self.theme.surface_dark,
-                    fg=self.theme.text_secondary).pack(anchor="w", pady=2)
+        # Login header with elegant design
+        login_header = tk.Frame(login_card, bg=self.theme.surface_elevated, height=80)
+        login_header.pack(fill="x")
+        login_header.pack_propagate(False)
         
-        # Center column - Premium Features (first half)
-        center_column = tk.Frame(content_frame, bg=self.theme.surface_dark, padx=10)
-        center_column.grid(row=0, column=1, sticky="nsew", padx=5)
-        
-        tk.Label(center_column, text="✨ PREMIUM FEATURES", 
-                font=self.theme.font_heading,
-                bg=self.theme.surface_dark,
-                fg=self.theme.primary_gold).pack(pady=(0, 10))
-        
-        features_part1 = [
-            "🔐 Secure Staff Authentication",
-            "⏰ Real-time Attendance Tracking", 
-            "📋 Advanced Report Management"
-        ]
-        
-        for feature in features_part1:
-            tk.Label(center_column, text=feature, 
-                    font=self.theme.font_body,
-                    bg=self.theme.surface_dark,
-                    fg=self.theme.text_secondary).pack(anchor="w", pady=2)
-        
-        # Right column - Premium Features (second half)
-        right_column = tk.Frame(content_frame, bg=self.theme.surface_dark, padx=10)
-        right_column.grid(row=0, column=2, sticky="nsew", padx=(5, 0))
-        
-        tk.Label(right_column, text="🎯 ADVANCED TOOLS", 
-                font=self.theme.font_heading,
-                bg=self.theme.surface_dark,
-                fg=self.theme.success_emerald).pack(pady=(0, 10))
-        
-        features_part2 = [
-            "💰 Automated Payroll System",
-            "🏖️ Smart Leave Management",
-            "📊 Executive Analytics Dashboard"
-        ]
-        
-        for feature in features_part2:
-            tk.Label(right_column, text=feature, 
-                    font=self.theme.font_body,
-                    bg=self.theme.surface_dark,
-                    fg=self.theme.text_secondary).pack(anchor="w", pady=2)
-          # Right side - Login form
-        login_frame = tk.Frame(container, bg=self.theme.surface_dark,
-                              highlightbackground=self.theme.primary_gold,
-                              highlightthickness=2, padx=20, pady=20)
-        login_frame.pack(side=tk.RIGHT, fill="y", padx=(10, 0))
-        
-        tk.Label(login_frame, text="🔑 STAFF LOGIN", 
+        login_title = tk.Label(login_header, text="🔑 STAFF PORTAL", 
                 font=self.theme.font_title,
-                bg=self.theme.surface_dark,
-                fg=self.theme.primary_gold).pack(pady=(0, 20))
+                bg=self.theme.surface_elevated,
+                fg=self.theme.primary_gold)
+        login_title.pack(expand=True)
         
-        # Username
-        tk.Label(login_frame, text="Staff Name:", 
-                bg=self.theme.surface_dark,
-                fg=self.theme.text_primary,
-                font=self.theme.font_body).pack(anchor="w")
-        self.username_entry = tk.Entry(login_frame, width=25, 
-                                     font=self.theme.font_body,
-                                     bg=self.theme.surface_light,
-                                     fg=self.theme.text_primary,
-                                     insertbackground=self.theme.primary_gold,
-                                     relief=tk.FLAT, bd=0)
-        self.username_entry.pack(fill="x", pady=(0, 15))
+        # Login form container
+        form_container = tk.Frame(login_card, bg=self.theme.surface_dark)
+        form_container.pack(fill="both", expand=True, padx=30, pady=30)
         
-        # Staff ID
-        tk.Label(login_frame, text="Staff ID:", 
-                bg=self.theme.surface_dark,
-                fg=self.theme.text_primary,
-                font=self.theme.font_body).pack(anchor="w")
-        self.id_entry = tk.Entry(login_frame, width=25, 
-                               font=self.theme.font_body,
-                               bg=self.theme.surface_light,
-                               fg=self.theme.text_primary,
-                               insertbackground=self.theme.primary_gold,
-                               relief=tk.FLAT, bd=0)
-        self.id_entry.pack(fill="x", pady=(0, 15))
+        # Enhanced form fields
+        self.create_enhanced_form_field(form_container, "👤 Staff Name", "username")
+        self.create_enhanced_form_field(form_container, "🆔 Staff ID", "id")
+        self.create_enhanced_form_field(form_container, "🔒 Password", "password", show="*")
         
-        # Password
-        tk.Label(login_frame, text="Password:", 
-                bg=self.theme.surface_dark,
-                fg=self.theme.text_primary,
-                font=self.theme.font_body).pack(anchor="w")
-        self.password_entry = tk.Entry(login_frame, width=25, show="*", 
-                                     font=self.theme.font_body,
-                                     bg=self.theme.surface_light,
-                                     fg=self.theme.text_primary,
-                                     insertbackground=self.theme.primary_gold,
-                                     relief=tk.FLAT, bd=0)
-        self.password_entry.pack(fill="x", pady=(0, 20))
+        # Enhanced button container
+        button_container = tk.Frame(form_container, bg=self.theme.surface_dark)
+        button_container.pack(fill="x", pady=(30, 0))
         
-        # Buttons
-        button_frame = tk.Frame(login_frame, bg=self.theme.surface_dark)
-        button_frame.pack(pady=10)
-        
-        login_btn = tk.Button(button_frame, text="🚀 LOGIN", width=15, 
+        # Premium login button
+        login_btn = tk.Button(button_container, 
+                            text="🚀 ACCESS PORTAL", 
                             command=self.do_login,
                             bg=self.theme.primary_gold,
-                            fg=self.theme.system_background,
+                            fg=self.theme.luxury_black,
                             font=self.theme.font_heading,
-                            relief=tk.FLAT, padx=10, pady=8,
-                            cursor="hand2")
-        login_btn.pack(pady=(0, 10))
+                            relief=tk.FLAT, 
+                            padx=25, pady=12,
+                            cursor="hand2",
+                            activebackground=self.theme.secondary_gold,
+                            activeforeground=self.theme.luxury_black)
+        login_btn.pack(fill="x", pady=(0, 15))
         
-        exit_btn = tk.Button(button_frame, text="❌ EXIT", width=15, 
+        # Enhanced exit button
+        exit_btn = tk.Button(button_container, 
+                           text="❌ EXIT SYSTEM", 
                            command=self.controller.destroy,
                            bg=self.theme.danger_ruby,
                            fg=self.theme.text_primary,
-                           font=self.theme.font_heading,
-                           relief=tk.FLAT, padx=10, pady=8,
-                           cursor="hand2")
-        exit_btn.pack()
-          # Default login info
-        info_frame = tk.Frame(login_frame, bg=self.theme.surface_dark)
-        info_frame.pack(pady=(20, 0))
+                           font=self.theme.font_subheading,
+                           relief=tk.FLAT, 
+                           padx=25, pady=10,
+                           cursor="hand2",
+                           activebackground="#FF6B6B",
+                           activeforeground=self.theme.text_primary)
+        exit_btn.pack(fill="x")
         
-        # tk.Label(info_frame, text="🔍 DEFAULT LOGIN:", 
-        #         font=self.theme.font_small,
-        #         bg=self.theme.surface_dark,
-        #         fg=self.theme.warning_amber).pack()
+        # Add hover effects
+        self.add_button_hover_effects(login_btn, exit_btn)
+        
+        # Status bar at bottom
+        self.create_status_bar()
+    
+    def create_animated_background(self):
+        """Create subtle background animation effect"""
+        # This creates a visual depth effect
+        pass  # Placeholder for potential future animation
+    
+    def create_enhanced_clock(self, parent):
+        """Create an enhanced live clock display"""
+        clock_container = tk.Frame(parent, bg=self.theme.surface_elevated, 
+                                  relief=tk.FLAT, bd=1)
+        clock_container.pack(pady=(15, 20), padx=20, fill="x")
+        
+        self.clock_label = tk.Label(clock_container, 
+                                   font=self.theme.font_heading,
+                                   bg=self.theme.surface_elevated,
+                                   fg=self.theme.secondary_gold,
+                                   pady=10)
+        self.clock_label.pack()
+        
+        self.update_enhanced_clock()
+    
+    def update_enhanced_clock(self):
+        """Update the enhanced clock display"""
+        current_time = datetime.now()
+        time_str = current_time.strftime("🕐 %H:%M:%S")
+        date_str = current_time.strftime("📅 %A, %B %d, %Y")
+        
+        display_text = f"{time_str}\n{date_str}"
+        
+        if hasattr(self, 'clock_label'):
+            self.clock_label.configure(text=display_text)
+            self.after(1000, self.update_enhanced_clock)
+    
+    def create_feature_card(self, parent, icon, title, description, row, col):
+        """Create a modern feature card"""
+        card = tk.Frame(parent, 
+                       bg=self.theme.surface_elevated,
+                       highlightbackground=self.theme.border_light,
+                       highlightthickness=1,
+                       relief=tk.FLAT)
+        card.grid(row=row, column=col, padx=8, pady=8, sticky="nsew")
+        
+        # Icon
+        icon_label = tk.Label(card, text=icon, 
+                             font=("Segoe UI", 24),
+                             bg=self.theme.surface_elevated,
+                             fg=self.theme.primary_gold)
+        icon_label.pack(pady=(15, 5))
+        
+        # Title
+        title_label = tk.Label(card, text=title, 
+                              font=self.theme.font_small,
+                              bg=self.theme.surface_elevated,
+                              fg=self.theme.text_primary)
+        title_label.pack(pady=(0, 3))
+        
+        # Description
+        desc_label = tk.Label(card, text=description, 
+                             font=self.theme.font_tiny,
+                             bg=self.theme.surface_elevated,
+                             fg=self.theme.text_tertiary)
+        desc_label.pack(pady=(0, 15))
+        
+        # Add hover effect
+        def on_enter(e):
+            card.configure(highlightbackground=self.theme.primary_gold)
+            
+        def on_leave(e):
+            card.configure(highlightbackground=self.theme.border_light)
+            
+        card.bind("<Enter>", on_enter)
+        card.bind("<Leave>", on_leave)
+    
+    def create_enhanced_form_field(self, parent, label_text, field_name, show=None):
+        """Create enhanced form field with modern styling"""
+        field_container = tk.Frame(parent, bg=self.theme.surface_dark)
+        field_container.pack(fill="x", pady=(0, 20))
+        
+        # Label with icon
+        label = tk.Label(field_container, text=label_text,
+                        bg=self.theme.surface_dark,
+                        fg=self.theme.text_secondary,
+                        font=self.theme.font_subheading)
+        label.pack(anchor="w", pady=(0, 8))
+        
+        # Entry field with enhanced styling
+        entry_frame = tk.Frame(field_container, 
+                              bg=self.theme.surface_elevated,
+                              highlightbackground=self.theme.border_light,
+                              highlightthickness=1,
+                              relief=tk.FLAT)
+        entry_frame.pack(fill="x")
+        
+        entry = tk.Entry(entry_frame, 
+                        font=self.theme.font_body,
+                        bg=self.theme.surface_elevated,
+                        fg=self.theme.text_primary,
+                        insertbackground=self.theme.primary_gold,
+                        relief=tk.FLAT, 
+                        bd=0,
+                        show=show)
+        entry.pack(fill="x", padx=15, pady=12)
+        
+        # Store entry reference
+        setattr(self, f"{field_name}_entry", entry)
+        
+        # Add focus effects
+        def on_focus_in(e):
+            entry_frame.configure(highlightbackground=self.theme.primary_gold)
+            
+        def on_focus_out(e):
+            entry_frame.configure(highlightbackground=self.theme.border_light)
+            
+        entry.bind("<FocusIn>", on_focus_in)
+        entry.bind("<FocusOut>", on_focus_out)
+    def add_button_hover_effects(self, *buttons):
+        """Add smooth hover effects to buttons"""
+        for button in buttons:
+            original_bg = button.cget('bg')
+            
+            def on_enter(e, btn=button):
+                if btn.cget('bg') == self.theme.primary_gold:
+                    btn.configure(bg=self.theme.secondary_gold)
+                elif btn.cget('bg') == self.theme.danger_ruby:
+                    btn.configure(bg="#FF6B6B")
+                    
+            def on_leave(e, btn=button, orig=original_bg):
+                btn.configure(bg=orig)
+                
+            button.bind("<Enter>", on_enter)
+            button.bind("<Leave>", on_leave)
+    
+    def create_status_bar(self):
+        """Create a modern status bar"""
+        status_frame = tk.Frame(self, bg=self.theme.surface_elevated, height=30)
+        status_frame.pack(fill="x", side="bottom")
+        status_frame.pack_propagate(False)
+        
+        # System status
+        status_text = "🟢 System Online | 🔒 Secure Connection | 💻 Premium Version"
+        status_label = tk.Label(status_frame, text=status_text,
+                               bg=self.theme.surface_elevated,
+                               fg=self.theme.text_tertiary,
+                               font=self.theme.font_tiny)
+        status_label.pack(side="left", padx=20, pady=6)
+    
+    def get_system_stats(self):
+        """Get current system statistics for display"""
+        stats = []
+        
+        # Count total staff
+        total_staff = 0
+        if os.path.exists(FILE_USER):
+            with open(FILE_USER, "r") as file:
+                total_staff = len(file.readlines())
+        stats.append(f"👥 Total Staff: {total_staff}")
+        
+        # Count today's attendance
+        today_attendance = 0
+        if os.path.exists(FILE_ABSENSI):
+            today = datetime.now().strftime("%Y-%m-%d")
+            with open(FILE_ABSENSI, "r") as file:
+                for line in file:
+                    if today in line:
+                        today_attendance += 1
+        stats.append(f"✅ Today's Check-ins: {today_attendance}")
+        
+        # Count pending reports
+        pending_reports = 0
+        if os.path.exists(FILE_LAPORAN):
+            with open(FILE_LAPORAN, "r") as file:
+                for line in file:
+                    if "Pending" in line:
+                        pending_reports += 1
+        stats.append(f"📋 Pending Reports: {pending_reports}")
+        
+        # Count pending leaves
+        pending_leaves = 0
+        if os.path.exists(FILE_IZIN):
+            with open(FILE_IZIN, "r") as file:
+                for line in file:
+                    if "Pending" in line:
+                        pending_leaves += 1
+        stats.append(f"🏖️ Pending Leaves: {pending_leaves}")
+        
+        # System status
+        stats.append("🔧 System Status: Online")
+        
+        return stats
+    
+    def do_login(self):
+        """Enhanced login process with improved feedback"""
+        username = self.username_entry.get().strip()
+        id_karyawan = self.id_entry.get().strip()
+        password = self.password_entry.get().strip()
+        
+        if not username or not id_karyawan or not password:
+            messagebox.showerror("❌ Login Error", 
+                               "Please fill in all required fields!\n\n"
+                               "All fields must be completed to access the system.")
+            return
+            
+        # Ensure staff data exists
+        initialize_default_staff()
+        
+        # Enhanced login verification
+        try:
+            with open(FILE_USER, "r") as file:
+                for line in file:
+                    data = line.strip().split(":")
+                    if len(data) >= 5:
+                        saved_user, saved_id, saved_pass, saved_status, saved_gaji = data
+                        if username == saved_user and id_karyawan == saved_id and password == saved_pass:
+                            # Create user objects based on role
+                            if saved_status == "Manager":
+                                user = Manager(saved_user, saved_id, saved_pass, int(saved_gaji))
+                            elif saved_status == "Admin":
+                                user = Admin(saved_user, saved_id, saved_pass, int(saved_gaji))
+                            elif saved_status == "HumanResource":
+                                user = HumanResource(saved_user, saved_id, saved_pass, int(saved_gaji))
+                            elif saved_status == "CleaningService":
+                                user = CleaningService(saved_user, saved_id, saved_pass, int(saved_gaji))
+                            elif saved_status == "Marketing":
+                                user = Marketing(saved_user, saved_id, saved_pass, int(saved_gaji))
+                            elif saved_status == "Internship":
+                                user = Internship(saved_user, saved_id, saved_pass, int(saved_gaji))
+                            else:
+                                user = None
+                                
+                            if user:
+                                self.controller.current_user = user
+                                messagebox.showinfo("✅ Login Successful", 
+                                                  f"Welcome back, {saved_user}!\n\n"
+                                                  f"Role: {saved_status}\n"
+                                                  f"Access Level: Premium\n"
+                                                  f"Login Time: {datetime.now().strftime('%H:%M:%S')}")
+                                self.controller.show_frame(MainMenuPage)
+                                return
+            
+            # Login failed
+            messagebox.showerror("❌ Authentication Failed", 
+                               "Invalid credentials!\n\n"
+                               "Please check your username, ID, and password.\n"
+                               "Contact your administrator if you continue to have issues.")                               
+        except Exception as e:
+            messagebox.showerror("❌ System Error", 
+                               f"An error occurred during login:\n{str(e)}\n\n"
+                               "Please try again or contact system administrator.")
+    
+    def create_status_bar(self):
+        """Create a modern status bar"""
+        status_frame = tk.Frame(self, bg=self.theme.surface_elevated, height=30)
+        status_frame.pack(fill="x", side="bottom")
+        status_frame.pack_propagate(False)
+        
+        # System status
+        status_text = "🟢 System Online | 🔒 Secure Connection | 💻 Premium Version"
+        status_label = tk.Label(status_frame, text=status_text,
+                               bg=self.theme.surface_elevated,
+                               fg=self.theme.text_tertiary,
+                               font=self.theme.font_tiny)
+        status_label.pack(side="left", padx=20, pady=6)
     
     
     def create_live_clock(self, parent):
@@ -631,6 +893,8 @@ class LoginPage(tk.Frame):
         
         messagebox.showerror("Login Failed", "Username, ID, or password is incorrect!")
 
+
+
 class MainMenuPage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
@@ -655,37 +919,133 @@ class MainMenuPage(tk.Frame):
                               text="LOGOUT", 
                               command=self.logout,
                               bg=self.theme.danger_ruby,
-                              fg=self.theme.text_primary,
-                              font=self.theme.font_heading,
+                              fg=self.theme.text_primary,                              font=self.theme.font_heading,
                               relief=tk.FLAT, padx=15, pady=8,
                               cursor="hand2")
         logout_btn.pack(side=tk.RIGHT, padx=20, pady=10)
         
-        # User info frame with elegant styling
-        user_frame = tk.Frame(self, bg=self.theme.system_background)
-        user_frame.pack(fill="x", padx=20, pady=15)
+        # Create welcome banner and stats
+        self.create_welcome_banner()
         
-        self.status_label = tk.Label(user_frame, 
-                                   text="", 
-                                   font=self.theme.font_body,
-                                   bg=self.theme.system_background,
-                                   fg=self.theme.text_secondary)
-        self.status_label.pack(anchor="w")
+    def create_welcome_banner(self):
+        """Create welcome banner with user information and elegant decorations"""
+        # Enhanced banner frame with elegant border
+        banner_frame = tk.Frame(self, bg=self.theme.surface_elevated, height=90,
+                               highlightbackground=self.theme.primary_gold,
+                               highlightthickness=1, relief=tk.FLAT)
+        banner_frame.pack(fill="x", padx=20, pady=(10, 0))
+        banner_frame.pack_propagate(False)
         
-        # Create luxurious tabbed interface
+        # Decorative top accent line
+        top_accent = tk.Frame(banner_frame, bg=self.theme.primary_gold, height=3)
+        top_accent.pack(fill="x")
+        
+        # Welcome message container with side decorations
+        welcome_container = tk.Frame(banner_frame, bg=self.theme.surface_elevated)
+        welcome_container.pack(expand=True, fill="both", padx=25, pady=8)
+        
+        # Left decorative element
+        left_decoration = tk.Label(welcome_container, text="✨", 
+                                  font=("Segoe UI", 16),
+                                  bg=self.theme.surface_elevated,
+                                  fg=self.theme.primary_gold)
+        left_decoration.pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Center content container
+        center_container = tk.Frame(welcome_container, bg=self.theme.surface_elevated)
+        center_container.pack(side=tk.LEFT, expand=True, fill="both")
+        
+        # Right decorative element
+        right_decoration = tk.Label(welcome_container, text="✨", 
+                                   font=("Segoe UI", 16),
+                                   bg=self.theme.surface_elevated,
+                                   fg=self.theme.primary_gold)
+        right_decoration.pack(side=tk.RIGHT, padx=(10, 0))
+        
+        if hasattr(self.controller, 'current_user') and self.controller.current_user:
+            user = self.controller.current_user
+            welcome_text = f"🌟 Welcome back, {user.getNama()}! 🌟"
+            role_text = f"Role: {user.getStatus()}"
+            
+            # Enhanced role badge
+            role_badge_text = f"🎯 {user.getStatus().upper()}"
+        else:
+            welcome_text = "🌟 Welcome to the Luxury Experience! 🌟"
+            role_text = "Guest Access"
+            role_badge_text = "👤 GUEST MODE"
+        
+        self.welcome_label = tk.Label(center_container, 
+                                     text=welcome_text,
+                                     font=self.theme.font_title,
+                                     bg=self.theme.surface_elevated,
+                                     fg=self.theme.primary_gold)
+        self.welcome_label.pack(pady=(5, 2))
+        
+        # Enhanced role badge with background
+        role_badge_frame = tk.Frame(center_container, bg=self.theme.primary_gold,
+                                   relief=tk.FLAT, padx=12, pady=4)
+        role_badge_frame.pack(pady=2)
+        
+        role_badge_label = tk.Label(role_badge_frame, text=role_badge_text,
+                                   font=self.theme.font_small,
+                                   bg=self.theme.primary_gold,
+                                   fg=self.theme.luxury_black)
+        role_badge_label.pack()
+        
+        # Decorative bottom accent line
+        bottom_accent = tk.Frame(banner_frame, bg=self.theme.secondary_gold, height=2)
+        bottom_accent.pack(fill="x")
+        
+        # Elegant separator with diamond decoration
+        separator_frame = tk.Frame(self, bg=self.theme.system_background, height=25)
+        separator_frame.pack(fill="x", padx=20)
+        separator_frame.pack_propagate(False)
+        
+        # Diamond separator design
+        diamond_container = tk.Frame(separator_frame, bg=self.theme.system_background)
+        diamond_container.pack(expand=True)
+        
+        # Left line
+        left_line = tk.Frame(diamond_container, bg=self.theme.border_light, height=1, width=150)
+        left_line.pack(side=tk.LEFT, pady=12)
+        
+        # Diamond decoration
+        diamond_label = tk.Label(diamond_container, text="◆", 
+                                font=("Segoe UI", 12),
+                                bg=self.theme.system_background,
+                                fg=self.theme.primary_gold)
+        diamond_label.pack(side=tk.LEFT, padx=15, pady=8)
+        
+        # Right line
+        right_line = tk.Frame(diamond_container, bg=self.theme.border_light, height=1, width=150)
+        right_line.pack(side=tk.LEFT, pady=12)
+        
+        # Create luxurious tabbed interface with enhanced styling
         style = ttk.Style()
-        style.configure("Hotel.TNotebook", background=self.theme.system_background, borderwidth=0)
+        style.configure("Hotel.TNotebook", 
+                       background=self.theme.system_background, 
+                       borderwidth=0,
+                       tabmargins=[2, 5, 2, 0])
         style.configure("Hotel.TNotebook.Tab", 
                        background=self.theme.surface_dark,
                        foreground=self.theme.text_secondary,
-                       padding=[20, 12],
-                       font=self.theme.font_heading)
+                       padding=[25, 15],
+                       font=self.theme.font_heading,
+                       focuscolor="none")
         style.map("Hotel.TNotebook.Tab",
-                 background=[("selected", self.theme.primary_gold)],
-                 foreground=[("selected", self.theme.system_background)])
+                 background=[("selected", self.theme.primary_gold),
+                            ("active", self.theme.surface_elevated)],
+                 foreground=[("selected", self.theme.luxury_black),
+                            ("active", self.theme.primary_gold)])
         
-        self.notebook = ttk.Notebook(self, style="Hotel.TNotebook")
-        self.notebook.pack(fill="both", expand=True, padx=20, pady=15)
+        # Tab container with elegant frame
+        tab_container = tk.Frame(self, bg=self.theme.system_background,
+                                highlightbackground=self.theme.border_light,
+                                highlightthickness=1, relief=tk.FLAT)
+        tab_container.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+        
+        self.notebook = ttk.Notebook(tab_container, style="Hotel.TNotebook")
+        self.notebook.pack(fill="both", expand=True, padx=10, pady=10)
         
         # Tab 1: Essential Hotel Operations
         essential_tab = tk.Frame(self.notebook, bg=self.theme.system_background)
@@ -726,7 +1086,6 @@ class MainMenuPage(tk.Frame):
         
         self._create_luxury_card(executive_tab, "📈 Review Reports", "Staff report evaluation", 
                          self.menu_review_laporan, 0, 0)
-        
         self._create_luxury_card(executive_tab, "📊 Analytics Dashboard", "Performance insights", 
                          self.menu_team_analytics, 0, 1)
         
@@ -784,6 +1143,8 @@ class MainMenuPage(tk.Frame):
         action_btn.bind("<Leave>", on_leave)
         
         return card_frame
+
+
 
     def menu_checkin_checkout(self):
         """Staff check-in/check-out for hotel management"""
@@ -2043,8 +2404,8 @@ class MainMenuPage(tk.Frame):
         # Center the dialog
         dialog.update_idletasks()
         x = (dialog.winfo_screenwidth() // 2) - (1200 // 2)
-        y = (dialog.winfo_screenheight() // 2) - (700 // 2)
-        dialog.geometry(f"1200x700+{x}+{y}")
+        y = (dialog.winfo_screenheight() // 2) - (720 // 2)
+        dialog.geometry(f"1200x650+{x}+{y}")
         
         # Header
         header_frame = tk.Frame(dialog, bg=self.theme.primary_gold)
@@ -2136,8 +2497,7 @@ class MainMenuPage(tk.Frame):
                               fg=self.theme.text_primary,
                               insertbackground=self.theme.primary_gold)
         comment_text.pack(fill="x", pady=(5, 0))
-        
-        # Action buttons
+          # Action buttons
         action_frame = tk.Frame(details_content, bg=self.theme.surface_dark)
         action_frame.pack(fill="x")
         
@@ -2153,22 +2513,29 @@ class MainMenuPage(tk.Frame):
             
             filter_status = status_filter.get()
             
-            with open(FILE_LAPORAN, "r") as file:
-                for line in file:
-                    parts = line.strip().split(":")
-                    if len(parts) >= 8:
-                        report_id, staff_id, staff_name, title, timestamp, content, status, notes = parts[:8]
-                        
-                        if filter_status == "All" or status == filter_status:
-                            # Format timestamp for display
-                            try:
-                                date_part = timestamp.split()[0]
-                            except:
-                                date_part = timestamp
+            try:
+                with open(FILE_LAPORAN, "r") as file:
+                    for line in file:
+                        line = line.strip()
+                        if not line:                            continue
                             
-                            reports_tree.insert("", "end", values=(
-                                report_id, staff_name, title, date_part, status
-                            ))
+                        parts = line.split(":")
+                        if len(parts) >= 8:
+                            report_id, staff_id, staff_name, title, timestamp, content, status, notes = parts[:8]
+                            
+                            if filter_status == "All" or status == filter_status:
+                                # Format timestamp for display
+                                try:
+                                    date_part = timestamp.split()[0]
+                                except:
+                                    date_part = timestamp
+                                
+                                reports_tree.insert("", "end", values=(
+                                    report_id, staff_name, title, date_part, status
+                                ))
+            except Exception as e:
+                print(f"Error loading reports: {e}")
+                messagebox.showerror("Error", f"Error loading reports: {e}")
         
         def on_report_select(event):
             selected = reports_tree.selection()
@@ -2183,40 +2550,53 @@ class MainMenuPage(tk.Frame):
             if not os.path.exists(FILE_LAPORAN):
                 return
             
-            with open(FILE_LAPORAN, "r") as file:
-                for line in file:
-                    parts = line.strip().split(":")
-                    if len(parts) >= 8 and parts[0] == report_id:
-                        report_id, staff_id, staff_name, title, timestamp, content, status, notes = parts[:8]
-                        
-                        details = f"Report ID: {report_id}\n"
-                        details += f"Staff ID: {staff_id}\n"
-                        details += f"Staff Name: {staff_name}\n"
-                        details += f"Report Type: {title}\n"
-                        details += f"Submission Time: {timestamp}\n"
-                        details += f"Current Status: {status}\n\n"
-                        details += "=" * 50 + "\n"
-                        details += "REPORT CONTENT:\n"
-                        details += "=" * 50 + "\n\n"
-                        details += content + "\n\n"
-                        
-                        if notes and notes != "-":
+            try:
+                with open(FILE_LAPORAN, "r") as file:
+                    for line in file:
+                        line = line.strip()
+                        if not line:
+                            continue
+                            
+                        parts = line.split(":")
+                        if len(parts) >= 8 and parts[0] == str(report_id):
+                            report_id_found, staff_id, staff_name, title, timestamp, content, status, notes = parts[:8]
+                            
+                            # If there are more parts, rejoin the content (in case content contains ":")
+                            if len(parts) > 8:
+                                content = ":".join(parts[5:-2])
+                                notes = parts[-1]
+                            
+                            details = f"Report ID: {report_id_found}\n"
+                            details += f"Staff ID: {staff_id}\n"
+                            details += f"Staff Name: {staff_name}\n"
+                            details += f"Report Type: {title}\n"
+                            details += f"Submission Time: {timestamp}\n"
+                            details += f"Current Status: {status}\n\n"
                             details += "=" * 50 + "\n"
-                            details += "MANAGER NOTES:\n"
-                            details += "=" * 50 + "\n"
-                            details += notes
-                        
-                        details_text.config(state=tk.NORMAL)
-                        details_text.delete("1.0", tk.END)
-                        details_text.insert("1.0", details)
-                        details_text.config(state=tk.DISABLED)
-                        
-                        # Load existing comment
-                        comment_text.delete("1.0", tk.END)
-                        if notes and notes != "-":
-                            comment_text.insert("1.0", notes)
-                        
-                        break
+                            details += "REPORT CONTENT:\n"
+                            details += "=" * 50 + "\n\n"
+                            details += content + "\n\n"
+                            
+                            if notes and notes != "-":
+                                details += "=" * 50 + "\n"
+                                details += "MANAGER NOTES:\n"
+                                details += "=" * 50 + "\n"
+                                details += notes
+                            
+                            details_text.config(state=tk.NORMAL)
+                            details_text.delete("1.0", tk.END)
+                            details_text.insert("1.0", details)
+                            details_text.config(state=tk.DISABLED)
+                            
+                            # Load existing comment
+                            comment_text.delete("1.0", tk.END)
+                            if notes and notes != "-":
+                                comment_text.insert("1.0", notes)
+                            
+                            break
+            except Exception as e:
+                print(f"Error loading report details: {e}")
+                messagebox.showerror("Error", f"Error loading report details: {e}")
         
         def update_report_status(new_status):
             report_id = selected_report_id.get()
@@ -2275,31 +2655,10 @@ class MainMenuPage(tk.Frame):
             load_reports()
         
         status_filter.trace("w", on_filter_change)
-        
-        # Bottom buttons
+          # Bottom buttons
         bottom_frame = tk.Frame(main_frame, bg=self.theme.system_background)
-        bottom_frame.pack(fill="x", pady=(10, 0))
+        bottom_frame.pack(fill="x", pady=(15, 0))
         
-        refresh_btn = tk.Button(bottom_frame, text="REFRESH", 
-                               command=load_reports,
-                               bg=self.theme.primary_gold,
-                               fg=self.theme.system_background,
-                               font=self.theme.font_heading,
-                               relief=tk.FLAT, padx=20, pady=5,
-                               cursor="hand2")
-        refresh_btn.pack(side=tk.LEFT)
-        
-        close_btn = tk.Button(bottom_frame, text="CLOSE", 
-                             command=dialog.destroy,
-                             bg=self.theme.surface_dark,
-                             fg=self.theme.text_primary,
-                             font=self.theme.font_heading,
-                             relief=tk.FLAT, padx=20, pady=5,
-                             cursor="hand2")
-        close_btn.pack(side=tk.RIGHT)
-        
-        # Load initial data
-        load_reports()
     
     def menu_team_analytics(self):
         """Team analytics dashboard"""
@@ -2307,10 +2666,12 @@ class MainMenuPage(tk.Frame):
     
     def menu_send_notification(self):
         """Send notifications to staff"""
-        messagebox.showinfo("Coming Soon", "Notification system will be available in the next update.")    
+        messagebox.showinfo("Coming Soon", "Notification system will be available in the next update.")
+    
     def logout(self):
-            self.controller.current_user = None
-            self.controller.show_frame(LoginPage)
+        """Logout and return to login page"""
+        self.controller.current_user = None
+        self.controller.show_frame(LoginPage)
 
 if __name__ == "__main__":
 

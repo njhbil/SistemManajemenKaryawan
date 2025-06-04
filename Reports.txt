@@ -1,0 +1,8 @@
+RPT1717462440:1001:manager:Daily Report:2025-06-04 08:04:Approved:Daily Report Test: Daily Report Test
+
+Content:
+Testing report functionality with proper format:Approved:Report approved by manager
+RPT1717462500:1001:manager:Daily Report:2025-06-04 08:05:Rejected:Revision Report: Revision Report
+
+Content:
+This is a test report for revision functionality:Pending:-
