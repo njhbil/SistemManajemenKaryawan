@@ -972,7 +972,7 @@ class MainMenuPage(tk.Frame):
         else:
             welcome_text = "🌟 Welcome to the Luxury Experience! 🌟"
             role_text = "Guest Access"
-            role_badge_text = "👤 GUEST MODE"
+            role_badge_text = "👤 EMPLOYEE MODE"
         
         self.welcome_label = tk.Label(center_container, 
                                      text=welcome_text,
