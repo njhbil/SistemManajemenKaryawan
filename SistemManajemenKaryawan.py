@@ -9,7 +9,6 @@ FILE_USER = "Staff.txt"           # Staff login data
 FILE_ABSENSI = "Attendance.txt"   # Staff attendance records
 FILE_IZIN = "Leaves.txt"          # Leave requests
 FILE_LAPORAN = "Reports.txt"      # Reports and feedback
-FILE_CHECKIN = "CheckIn.txt"      # Guest check-in records
 
 # Default staff data initialization function
 def initialize_default_staff():
