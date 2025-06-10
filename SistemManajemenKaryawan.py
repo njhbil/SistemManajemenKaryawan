@@ -1,14 +1,8 @@
 import tkinter as tk
 from tkinter import messagebox, simpledialog, ttk, Toplevel, scrolledtext, font
-import os
-import platform
-from datetime import datetime
+import os #akses file
+from datetime import datetime 
 from abc import ABC, abstractmethod
-import math
-import time
-import traceback
-from tkinter import PhotoImage
-import random
 
 # File paths for Hotel Management System
 FILE_USER = "Staff.txt"           # Staff login data
